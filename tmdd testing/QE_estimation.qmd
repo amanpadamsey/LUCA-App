@@ -1,0 +1,62 @@
+---
+title: "Testing Quenching efficiency for Quenching Antibody"
+author: "Aman Padamsey"
+format: html
+editor: visual
+---
+
+## Aim:
+
+Determining the quenching efficiency of quenching antibody using anti-IgG beads
+
+## Requirements
+
+-   [Quantum™ Simply Cellular® anti-Human IgG](https://www.bangslabs.com/product-selection/816) (*Catalog number 816)*
+
+-   AF-488 labelled human antibody
+
+-   [Alexa Fluor 488 Polyclonal Antibody](https://www.thermofisher.com/antibody/product/Alexa-Fluor-488-Antibody-Polyclonal/A-11094) *(ThermoFischer Catalog number A-11094)*
+
+-   Cell medium intended for cellular experiment
+
+## Procedure
+
+-   Dilute labelled antibody to 200nM in cell media. (Volume needed \~500µL)
+
+-   Take bottles containing anti-IgG beads, shake the bottle to ensure a uniform suspension (Do not vortex or sonicate the stock bottle)
+
+-   Split diluted antibody solution in 5 eppes (100µL in each eppe)
+
+-   Add one drop from each of the bottles of beads into the eppes separately (labeled bottles 1 -- 4 and 'B')
+
+-   Incubate in the dark for 10 minutes at RT
+
+-   Add 1ml of cell media buffer to each eppe after incubation and centrifuge at 2500 x G for 5 minutes
+
+-   Discard (decant) supernatant
+
+-   Repeat 1x more
+
+-   Re-suspend beads in 1ml of cell media. Split each eppe in two (0.5 ml of re-suspended bead from each eppe in a new eppe)
+
+-   Make up volume in each eppe to 1ml with cell media (add 0.5 ml cell media in each eppe)
+
+-   Centrifuge as before
+
+-   Re-suspend one half of the 'stained-bead' eppes with 100 µL of the same concentration of quenching antibody as used/intended for cellular experiment *(ideally \>= 10µg/ml). Re-suspend* remaining half of the 'stained-bead' eppes with 100µL of cell media only.
+
+-   Incubate in fridge for same duration of time used for used/intended for cellular experiment *(ideally \>= 10min)*
+
+-   Add 100µL of medium in each of the eppes to bring the volume to 200µL and read in FACS (plate reader for convenience.
+
+## Calculation
+
+-   Calculate MFI of each of the bead population (Geo-mean/Median)
+
+-   Subtract the MFI of all of the bead populations with that of the background 'B'
+
+-   Use the following equation to calculate the QE for each of the bead population:
+
+    > $QE = (MFIunquenched - MFIquenched)/MFIunquenched$
+
+-   Ideally the QE for each bead population (#1-4) should be the same and should be high (\>0.85)
