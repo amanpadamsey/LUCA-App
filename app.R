@@ -1,13 +1,9 @@
 
-library(shiny)
-library(shinythemes)
-library(tidyverse)
-library(pzfx)
-library(glue)
-library(tools)
-library(shinyFeedback)
 
-source("functions.R")
+#source functions from function file
+# source("functions.R")
+source("workflow.R")
+
 # Define UI
 ui <- fluidPage(
   shinyFeedback::useShinyFeedback(),
@@ -35,7 +31,7 @@ ui <- fluidPage(
         #textInput('mfi_var','Enter mfi variable',value = 'Geometric Mean : pHAb-A'),
         # verbatimTextOutput('mfi_choices')
         #selectInput('mfi_choices','Select desired MFI variable',choices = ''),
-        actionButton('submit','Submit'),
+        # actionButton('submit','Submit'),
         textInput(inputId = 'mfi_choices', 'Select variable for MFI', value = "Geometric Mean : pHAb-A"),
         verbatimTextOutput('mfi_choices_list'),
         textInput(
@@ -44,7 +40,7 @@ ui <- fluidPage(
         ),
         verbatimTextOutput('control_choices'),
         verbatimTextOutput('misc'),
-        downloadButton("download_csv", "Download .csv"), downloadButton("download_pzfx", "Download .pzfx")
+        downloadButton("download_csv", "Download EDDS.csv"), downloadButton("download_pzfx", "Download Graphpad friendly .csv")
       ),
       # sidebarPanel
       
@@ -96,8 +92,6 @@ ui <- fluidPage(
                  multiple = TRUE
                ),
                textInput('mfi_var_abc','Enter MFI variable', 'Geometric Mean : pHAb-A') , textInput('qe','Enter calculated %QE')
-               
-               
              ),
              
              mainPanel(
@@ -113,9 +107,10 @@ ui <- fluidPage(
   
     tabPanel("DCIA", "This panel is intentionally left blank"),
     tabPanel("SEC", "This panel is intentionally left blank"),
-    tabPanel("EDDS_STITCH", "This panel is intentionally left blank"),
+    # tabPanel("EDDS_STITCH", "This panel is intentionally left blank"),
+    tabPanel("MIXING"),
     tabPanel("WORKFLOW", "This panel is intentionally left blank",
-             
+    
              imageOutput('workflow', width = 'auto')
              
              
@@ -169,20 +164,8 @@ server <- function(input, output, session) {
   
   edds <- reactive({
     req(input$edds)
-    edds <- edds_read(input$edds$datapath)
     
-    shinyFeedback::feedbackWarning('edds',!is.Date(edds$`Experiment date`),'Cannot parse date') # check whether date is parsed
-    
-    dis_vals <- edds %>% distinct(`Experiment date`,`Well number`,`Plate number`) %>% nrow() # find distinct rows
-    shinyFeedback::feedbackWarning('edds',!(dis_vals == nrow(edds)),'Duplicate rows found')
-    
-    dups <- edds %>% filter(`Tapir ID_unlabeled molecule (parent)` != 'MOCK') %>% 
-      group_by(`Tapir ID_unlabeled molecule (parent)`) %>%  summarise(n = n()) %>% ungroup() %>% 
-      distinct(n) %>% nrow() > 1 #test for unequal duplicartes
-    
-    shinyFeedback::feedbackWarning('edds',dups,'Date cannot be parsed')
-    
-    edds
+    edds_process(input$edds$datapath)
   })
   
   
@@ -194,28 +177,7 @@ server <- function(input, output, session) {
     #input flowjo files and process
     req(input$flowjo)
     # readxl::read_excel(input$flowjo$datapath)
-    fj <- flow_jo_clean(input$flowjo$datapath)
-    
-    na_vals <- fj %>% complete.cases() %>% any() #check for missing values
-    if (na_vals) {
-      na_row <- fj[!(fj %>% complete.cases()),]
-        #map(fj,is.na) %>% map(\(.x) unlist(.x) %>% which(isTRUE(.x))) %>% unlist() %>% as.character()
-    }
-    shinyFeedback::feedbackWarning('flowjo',na_vals,'Flowjo file contains missing values')
-    req(!na_vals) 
-    
-    numeric_cols <- fj %>% ungroup() %>% 
-      select(c("Cell count_total", "Cell count_morphology_live", "Cell count_morphology", "Geometric Mean : pHAb-A")) %>% 
-      map_lgl(is.numeric) %>% 
-      unlist() %>% 
-      all() # check whether following columns are numeric
-    
-    shinyFeedback::feedbackWarning('flowjo',!numeric_cols,'Flowjo file contains non-numeric columns')
-    req(numeric_cols) 
-    
-    
-    
-    fj %>% mutate(across(where(is.character), toupper))
+    flowjo_processing(input$flowjo$datapath)
   })
   
   
