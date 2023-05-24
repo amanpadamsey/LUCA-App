@@ -69,7 +69,7 @@ flow_jo_clean <- function(list_flowjo_paths) { #enter list of flowjo files (path
     mutate(across(where(is.character), str_trim)) |> 
     
     mutate(`Well number` = str_extract(Name,'(...)\\.fcs$', group=1),
-           `Plate number` = str_extract(Name,regex("plate?(\\w+)_.*_",ignore_case = TRUE), group=1)) |> #add well number and plate number
+           `Plate number` = str_extract(Name,regex("plate.(\\w+)_.*_",ignore_case = TRUE), group=1)) |> #add well number and plate number
     
     fill(`Well number`,`Plate number`) #filldown 
   
@@ -102,28 +102,6 @@ flow_jo_clean <- function(list_flowjo_paths) { #enter list of flowjo files (path
     unique() 
   
   
-}
-
-
-
-# read fluorescence data file from tecan ----------------------------------
-#dosing_sol_file <- r'(C:\Users\PADAMSEA\Downloads\NGCD3TCB Dosing solution.xlsx)'
-
-
-dosing_sol_clean <- function(dosing_sol_file_path) {
-  
-  #lapply(dosing_sol_file_path, function)
-  
-  dosing_sol_file_read <- readxl::read_excel(dosing_sol_file_path,skip = 30,trim_ws = TRUE,
-                                             col_names = c('well','Fluorescence_dosing solution','Tapir ID_unlabeled molecule (parent)')) |> 
-    mutate(across(where(is.character), str_trim)) |> 
-    mutate(`Tapir ID_unlabeled molecule (parent)` = toupper(`Tapir ID_unlabeled molecule (parent)`))
-  
-  #|> mutate(`Experiment date` = case_when(well == 'End Time:' ~ parse_date(`Tapir ID_unlabeled molecule (parent)`,str_extract(,'\\d+/\\d+/\\d+'),'%m/%d/%Y') ))
-  dosing_sol_file_read['Experiment date'] <- parse_date(str_extract(dosing_sol_file_read[nrow(dosing_sol_file_read),2],'\\d+/\\d+/\\d+'),'%m/%d/%Y') 
-  
-  dosing_sol_file_read$`Fluorescence_dosing solution` <- as.numeric(dosing_sol_file_read$`Fluorescence_dosing solution`) 
-  dosing_sol_file_read[!is.na(dosing_sol_file_read[,3]),]
 }
 
 

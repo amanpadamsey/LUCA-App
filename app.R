@@ -174,9 +174,7 @@ server <- function(input, output, session) {
   
   
   flowjo <- reactive({
-    #input flowjo files and process
     req(input$flowjo)
-    # readxl::read_excel(input$flowjo$datapath)
     flowjo_processing(input$flowjo$datapath)
   })
   
@@ -192,21 +190,7 @@ server <- function(input, output, session) {
   
   dosing <- reactive({
     req(input$dosing)
-    ds <- lapply(input$dosing$datapath, dosing_sol_clean) |> bind_rows(.id = "column_label")
-    
-    dups <- ds %>% group_by(`Tapir ID_unlabeled molecule (parent)`) %>%  summarise(n = n()) %>% ungroup() %>% 
-      distinct(n,.keep_all = TRUE) #test for uneven duplicates in dataframe
-    
-    shinyFeedback::feedbackWarning('dosing',nrow(dups)>1,'Uneven duplicates in TAPIR ID')
-    shinyFeedback::feedbackWarning('dosing',!(ds$`Fluorescence_dosing solution` %>% is.numeric()),'Dosing solution not numeric')
-    print(!(ds$`Experiment date` %>% is.Date()))
-    shinyFeedback::feedbackWarning('dosing',(ds$`Experiment date` %>% is.na() %>% unlist() %>% any()),'Date cannot be parsed')
-    
-    
-    dis_vals <- ds %>% distinct(`Experiment date`,`Tapir ID_unlabeled molecule (parent)`) %>% nrow == nrow(ds)
-    shinyFeedback::feedbackWarning('dosing',!dis_vals,'Duplicate values found')
-  
-    ds %>% mutate(across(where(is.character), toupper)) #capitalize all words
+    dosing_processing(input$dosing$datapath)
     })
   
   
@@ -222,30 +206,10 @@ server <- function(input, output, session) {
   
   
   EDDS_combined <- reactive({
-    req(edds(), mfi_choices())
     
-    if (c(mfi_choices(), 'Fluorescence_dosing solution') %in% colnames(edds()) %>% all()) {
-      return(edds())
-      
-    } else if (mfi_choices() %in% colnames(edds())) {
-      req(dosing())
-      return(left_join(
-        edds(),
-        dosing(),
-        by = c("Experiment date", "Tapir ID_unlabeled molecule (parent)")
-      ))
-      
-    } else {
-      req(flowjo(), dosing())
-      return(left_join(
-        edds(),
-        dosing(),
-        by = c("Experiment date", "Tapir ID_unlabeled molecule (parent)")
-      ) |>
-        left_join(flowjo(),
-                  by = c('Plate number', 'Well number')) #|> View())
-      
-    )}
+    req(edds(), mfi_choices())
+    EDDS_combined_processing(edds(),mfi_choices())
+    
     
   })
       
