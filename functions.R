@@ -21,11 +21,11 @@ min_max_day <- function(df, control_mabs, col_est) {
     
   mota <-
     df %>% 
-    filter(`Alias_labeled molecule` == control_mabs[1]) %>% 
+    filter(`Tapir ID_unlabeled molecule (parent)` == control_mabs[1]) %>% 
     select(starts_with(col_est)) %>% .[1, 1] %>% as.numeric()
   
   cd_20 <-
-    df %>% filter(`Alias_labeled molecule` == control_mabs[2]) %>% 
+    df %>% filter(`Tapir ID_unlabeled molecule (parent)` == control_mabs[2]) %>% 
     select(starts_with(col_est)) %>% .[1, 1] %>% as.numeric()
   
   df <- df %>% 
@@ -35,7 +35,7 @@ min_max_day <- function(df, control_mabs, col_est) {
     
     mota <-
       df %>% 
-      filter(`Alias_labeled molecule` == control_mabs[1]) %>% 
+      filter(`Tapir ID_unlabeled molecule (parent)` == control_mabs[1]) %>% 
       select(starts_with(col_est)) %>% .[1, 1] %>% as.numeric()
     
     df <- df %>% 
@@ -58,7 +58,7 @@ min_max_day <- function(df, control_mabs, col_est) {
 mock_sub <- function(df,mfi_variable) {
   # enter grouped data to be subtracted
   mock <- mean((df |> 
-                  filter(str_detect(`Alias_labeled molecule`, 
+                  filter(str_detect(`Tapir ID_unlabeled molecule (parent)`, 
                                     regex('^mock',ignore_case = TRUE))))[[mfi_variable]], na.rm=TRUE)
   
   df[[paste0(mfi_variable,'_BG subtracted')]] <- df[[mfi_variable]] - mock
@@ -74,7 +74,7 @@ point_norm  <- function(df,mfi_variable,control_mabs) {
   #column_of_interest <- colnames(df) %>% str_detect('subtracted_dose normalized') %>% colnames(df)[.]
   
   control_slopes <- map(control_mabs, \(x) df %>% 
-                          filter(`Alias_labeled molecule` == x) %>% 
+                          filter(`Tapir ID_unlabeled molecule (parent)` == x) %>% 
                           select(estimate__lm_wo_normpoint) %>% 
                           .[1, 1] %>% as.numeric() )
   
@@ -99,10 +99,10 @@ point_norm  <- function(df,mfi_variable,control_mabs) {
 
 point_norm_2 <- function(df,control_mabs,mfi_variable) {
   mota <-
-    df %>% filter(`Alias_labeled molecule` == control_mabs[1]) %>% select(estimate__lm_wo_normpoint) %>% .[1, 1] %>% as.numeric()
+    df %>% filter(`Tapir ID_unlabeled molecule (parent)` == control_mabs[1]) %>% select(estimate__lm_wo_normpoint) %>% .[1, 1] %>% as.numeric()
   
   cd_20 <-
-    df %>% filter(`Alias_labeled molecule` == control_mabs[2]) %>% select(estimate__lm_wo_normpoint) %>% .[1, 1] %>% as.numeric()
+    df %>% filter(`Tapir ID_unlabeled molecule (parent)` == control_mabs[2]) %>% select(estimate__lm_wo_normpoint) %>% .[1, 1] %>% as.numeric()
   
   df %>% mutate(
     `Norm Geometric Mean : pHAb-A_BG subtracted_dose normalized` := (

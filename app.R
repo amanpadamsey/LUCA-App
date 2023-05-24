@@ -207,8 +207,8 @@ server <- function(input, output, session) {
   
   EDDS_combined <- reactive({
     
-    req(edds(), mfi_choices())
-    EDDS_combined_processing(edds(),mfi_choices())
+    req(edds(), mfi_choices(), flowjo(), dosing())
+    EDDS_combined_processing(edds(),mfi_choices(),flowjo(),dosing())
     
     
   })
@@ -234,7 +234,7 @@ server <- function(input, output, session) {
       ) 
     
     
-    edds_dn %>% filter(!str_detect(`Alias_labeled molecule`,
+    edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
                                    regex('mock', ignore_case = TRUE))) %>%
       group_by(`Experiment date`,
                `Tapir ID_unlabeled molecule (parent)`,
@@ -255,7 +255,7 @@ server <- function(input, output, session) {
       group_by(`Experiment date`, `Biosample ID`) %>% 
       do(point_norm(., mfi_choices(), control_mabs())) %>% ungroup()
     
-    model_w.pointnorm <- edds_dn %>% filter(!str_detect(`Alias_labeled molecule`,
+    model_w.pointnorm <- edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
                                                         regex('mock', ignore_case = TRUE))) %>% 
       group_by(`Tapir ID_unlabeled molecule (parent)`,`Biosample ID`) %>%
       do(lm_w_normpoint = lm(.[[paste0(mfi_choices(), '_BG subtracted_dose_control normalized')]] ~ 0 + .[['Incubation time']],data = .))
@@ -400,7 +400,7 @@ server <- function(input, output, session) {
   
   output$control_choices <- reactive({
     req(input$edds)
-    edds()$`Alias_labeled molecule` |> unique() |> c() |> paste0()
+    edds()$`Tapir ID_unlabeled molecule (parent)` |> unique() |> c() |> paste0()
     
   })
   

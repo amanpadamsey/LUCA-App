@@ -232,7 +232,7 @@ dosing_processing <- function(dosing_datapath) {
 
 # appending edds file with flowjo and dosing ------------------------------
 
-EDDS_combined_processing <- function(edds,mfi_choices) {
+EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
   if (c(mfi_choices, 'Fluorescence_dosing solution') %in% colnames(edds) %>% all()) {
     edds_combined <- edds
     
