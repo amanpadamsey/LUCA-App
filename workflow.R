@@ -23,6 +23,28 @@ if (getOption('run.main', default=TRUE)) {
 
 # end main script ---------------------------------------------------------
 
+# read and process edds file ----------------------------------------------
+
+
+edds_read <- function(edds_datapath){
+  read_delim(edds_datapath,
+             trim_ws = TRUE, na =  c("", "NA")) |>
+    mutate(across(where(is.character), str_trim),
+          `Plate number` = as.character(`Plate number`)) |> 
+    mutate(`Experiment date` = ymd(`Experiment date`), #parse date
+           `Tapir ID_unlabeled molecule (parent)` = 
+             toupper(`Tapir ID_unlabeled molecule (parent)`),
+           `Incubation time` = as.numeric(`Incubation time`)) %>% 
+    tryCatch(warning = function(err){cat("Could not parse date in EDDS, please
+                                          check whether format is y-m-d")
+      message(err)}, 
+      error = function(err){cat("Could not parse date in EDDS, please
+                                          check whether format is y-m-d")
+        message(err)}) # stop if date parsing error or warning
+  
+}
+
+
 
 #process edds file and give warnings if anything is amiss
 edds_process <- function(edds_datapath) {
@@ -151,26 +173,26 @@ dosing_processing <- function(dosing_datapath) {
 
 EDDS_combined_processing <- function(edds,mfi_choices) {
   if (c(mfi_choices, 'Fluorescence_dosing solution') %in% colnames(edds) %>% all()) {
-    return(edds)
+    edds_combined <- edds
     
   } else if (mfi_choices %in% colnames(edds)) {
     req(dosing)
-    return(left_join(
+    edds_combined <- left_join(
       edds,
       dosing,
       by = c("Experiment date", "Tapir ID_unlabeled molecule (parent)")
-    ))
+    )
     
   } else {
     req(flowjo, dosing)
-    return(left_join(
-      edds,
-      dosing,
-      by = c("Experiment date", "Tapir ID_unlabeled molecule (parent)")
-    ) |>
+    edds_combined <- left_join(edds,
+                               dosing,
+                               by = c("Experiment date", "Tapir ID_unlabeled molecule (parent)")) |>
       left_join(flowjo,
-                by = c('Plate number', 'Well number'))) #|> View())
+                by = c('Plate number', 'Well number')) #|> View())
   }
+  
+  return(edds_combined)
 }
 
   
