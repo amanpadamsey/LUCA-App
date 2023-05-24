@@ -15,7 +15,7 @@ if (sys.nframe() == 0){
   # mfi_choices <<- "Geometric Mean : pHAb-A"
   # 
   edds_datapath <<- "./testing Jo data/20230524_edds_nextCD3.csv" #comment out when finished testing
-  flowjo_datapath_list <<- "./testing Jo data/Flow jo 16-May-2023.xls"
+  flowjo_datapath_list <<- "./testing Jo data/" %>% list.files(pattern = "Flow",full.names = TRUE)
   dosing_datapath <<-  "./testing Jo data/" %>% list.files(full.names = TRUE,pattern = ".xlsx") 
   control_mabs <<- c("P1AF1537","P1AA4006")
   mfi_choices <<- "Geometric Mean : pHAb-A"
@@ -273,7 +273,7 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
   }
   
   na_vals_mfi <- edds_combined %>% filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>% 
-    select(mfi_choices) %>% is.na(.) %>% all() #checks whether there are any NA values in the geomean mfi column, returns TRUE if none
+    select(mfi_choices) %>% is.na(.) %>% any() #checks whether there are any NA values in the geomean mfi column, returns TRUE if none
   
   
   
@@ -333,4 +333,136 @@ edds_analysis <- function(edds_combined,mfi_choices,control_mabs) {
   edds_dn <- open_model(model_w.pointnorm,'lm_w_normpoint',edds_dn)
 
 }
+
+
+# Write to file for copy in graphpad --------------------------------------
+
+# create function to alternate columns 
+blend_df <- function(df) {
+  half <- df[,1:(ncol(df)/2)]
+  other_half <- df[,((ncol(df)/2)+1):ncol(df)]
+  neworder <- order(c(2*(seq_along(half) - 1) + 1,
+                      2*seq_along(other_half)))
+  cbind(half, other_half)[,neworder]
+}
+
+
+if(sys.nframe() == 0)type_lm = "wo"
+
+slope_stderr_format <- function(edds_dn, type_lm) { 
+  
+  slope <- paste0("estimate__lm_",type_lm,"_normpoint")
+  std_err <- paste0("std.error__lm_",type_lm,"_normpoint")
+  
+  slope_std_err <- edds_dn %>%  filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>%
+    select(`Tapir ID_unlabeled molecule (parent)`,
+           !!as.name(slope), !!as.name(std_err)) %>%
+    distinct(`Tapir ID_unlabeled molecule (parent)`, .keep_all = TRUE) %>%
+    pivot_wider(names_from = `Tapir ID_unlabeled molecule (parent)`, 
+                values_from = c(!!as.name(slope), !!as.name(std_err))) %>% 
+    blend_df()
+  
+  names(slope_std_err) <- map_chr(names(slope_std_err), ~ str_remove(.x,regex("(wo)|(w)")))
+
+  return(slope_std_err)
+}
+
+
+
+slope_stderr_combine <- function(edds_dn) {
+  
+  indi_vals <- edds_dn %>% group_by(`Experiment date`) %>% 
+    do(slope_stderr_format(.,"wo")) %>% 
+    ungroup()
+  indi_vals$`Experiment date` <- as.character(indi_vals$`Experiment date`)
+  
+  
+  comb_vals <- edds_dn %>% do(slope_stderr_format(.,"w"))
+  comb_vals <- comb_vals %>% mutate(`Experiment date` = "day1+day2")
+  combined_vals <- bind_rows(indi_vals,comb_vals)
+  
+  names(combined_vals)[-1] <- map_chr(names(combined_vals[-1]), ~ str_extract(.x,"point_(.*)",group = 1))
+  
+  return(combined_vals)
+}
+
+
+
+
+normalized_days <- function(edds_dn) {
+
+  
+  edds_dn %>%  filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>% select(
+    `Tapir ID_unlabeled molecule (parent)`,
+    min_max_estimate__lm_wo_normpoint,
+    `Experiment date`
+  ) %>% distinct(`Tapir ID_unlabeled molecule (parent)`,
+                 `Experiment date`,
+                 .keep_all = TRUE) %>% pivot_wider(names_from = `Tapir ID_unlabeled molecule (parent)`,
+                                                   values_from = min_max_estimate__lm_wo_normpoint,
+                                                   names_sep = "_")
+  
+  
+  
+}
+
+#raw data 
+
+raw_data_edds <- function(edds_dn, mfi_choices, col_raw) {
+  
+  raw_data_edds_ <- edds_dn %>% ungroup() %>% arrange(`Experiment date`) %>% 
+    filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>%
+    select(
+    `Tapir ID_unlabeled molecule (parent)`,
+    `Incubation time`,
+    # !!as.name(paste0(mfi_choices,"_BG subtracted")),
+    !!as.name(col_raw)
+  ) %>% pivot_wider(
+    names_from = `Tapir ID_unlabeled molecule (parent)`,
+    values_from = c(
+      # !!as.name(paste0(mfi_choices,"_BG subtracted")),
+      !!as.name(col_raw)
+    ),values_fn = list) %>% unnest_wider(col = everything(), names_sep = "_")
+  
+  names(raw_data_edds_)[-1] <- map_chr(names(raw_data_edds_[-1]), ~ str_extract(.x,"(.*)_",group = 1))
+  
+  return(raw_data_edds_)
+}
+
+
+raw_data_edds_combine <- function(edds_dn, mfi_choices) {
+  
+  list(
+    raw_data_edds(
+      edds_dn,
+      mfi_choices,
+      paste0(mfi_choices, "_BG subtracted_dose normalized")
+    ),
+    raw_data_edds(
+      edds_dn,
+      mfi_choices,
+      paste0(mfi_choices, "_BG subtracted_dose_control normalized")
+    )
+  )
+  
+}
+
+
+#make big list of all data to be written to graphpad
+
+files_to_write <- function(edds_dn, mfi_choices) { #returns list of files that can be graphpad friendly
+  
+  total_graphpad <- raw_data_edds_combine(edds_dn,mfi_choices) %>% 
+    append(list(normalized_days(edds_dn))) %>% 
+    append(list(slope_stderr_combine(edds_dn)))
+  
+  #total_graphpad %>% length()
+  names(total_graphpad) <- c("rawdata_BG subtracted_dose normalized.csv",
+                             "rawdata_BG subtracted_dose_control normalized.csv",
+                             "")
+
+}
+
+
+
 

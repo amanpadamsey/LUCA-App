@@ -435,16 +435,36 @@ server <- function(input, output, session) {
   
   
 # DOWNLOAD ----------------------------------------------------------------
-  
-  output$download_pzfx <-  downloadHandler(
-    filename = function() {
-      paste0(tools::file_path_sans_ext(input$edds$name), ".pzfx")
-    },
-    content = function(file) {
-      pzfx::write_pzfx(
-        graphpad(EDDS_combined_analysed(),mfi_choices()), file, x_col = 1)
-      
-    })
+ output$download_pzfx <- downloadHandler(
+   filename = function(){
+     paste("analysed_data", Sys.Date(), ".zip", sep = "")
+   },
+   content = function(file){
+     
+     temp_directory <- file.path(tempdir(), as.integer(Sys.time()))
+     dir.create(temp_directory)
+     
+     converted_abc_list() %>%
+       map2(tools::file_path_sans_ext(input$quickcal_conv_list$name),function(x,y){
+         if(!is.null(x)){
+           file_name <- glue("{y}_abc.csv")
+           readr::write_csv(x, file.path(temp_directory, file_name),col_names = FALSE)
+         }
+       })
+     
+     
+     zip::zip(
+       zipfile = file,
+       files = dir(temp_directory),
+       root = temp_directory
+     )
+     
+     
+     
+   },
+   contentType = "application/zip"
+   
+ )
   
   
  
