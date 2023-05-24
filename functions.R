@@ -4,7 +4,7 @@
 open_model <- function(df, column_model, ori_df) {
   ori_df <- ori_df %>% ungroup()
   
-  df %>% reframe(tidy(!!as.name(column_model)), glance(!!as.name(column_model))) %>% rename_with(., function(x) {
+  df %>% reframe(broom::tidy(!!as.name(column_model)), broom::glance(!!as.name(column_model))) %>% rename_with(., function(x) {
     paste(x, column_model, sep = "__")
   }, .cols = everything()) %>% 
     bind_cols(df[, 1:ncol(df)-1], .) %>% 

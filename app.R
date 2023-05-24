@@ -1,10 +1,7 @@
 
-
-#source functions from function file
-# source("functions.R")
-source("workflow.R")
-
+source("workflow.R") #contains functions and libraries required to run app and do analyses
 # Define UI
+
 ui <- fluidPage(
   shinyFeedback::useShinyFeedback(),
   theme = shinytheme("slate"),
@@ -28,10 +25,6 @@ ui <- fluidPage(
           accept = c('.xls', ".xlsx"),
           multiple = TRUE
         ),
-        #textInput('mfi_var','Enter mfi variable',value = 'Geometric Mean : pHAb-A'),
-        # verbatimTextOutput('mfi_choices')
-        #selectInput('mfi_choices','Select desired MFI variable',choices = ''),
-        # actionButton('submit','Submit'),
         textInput(inputId = 'mfi_choices', 'Select variable for MFI', value = "Geometric Mean : pHAb-A"),
         verbatimTextOutput('mfi_choices_list'),
         textInput(
@@ -42,27 +35,15 @@ ui <- fluidPage(
         verbatimTextOutput('misc'),
         downloadButton("download_csv", "Download EDDS.csv"), downloadButton("download_pzfx", "Download Graphpad friendly .csv")
       ),
-      # sidebarPanel
-      
-      
-      # sidebarPanel(
-      #   tags$h3('graph settings'),
-      #   sliderInput('rotation', 'rotate labels', 0, 5, 0, 1)
-      # ),
-      # 
-      
+
       mainPanel(
-        #h1("Header 1"),
         
-        #h4("Output 1"),
-        #verbatimTextOutput("txtout"),
         plotOutput('lm_plot', brush = "plot_brush",width = '4000px'),
         tableOutput("lm_plot_info"),
         plotOutput('luca_plot', brush = "plot_brush", width = 'auto'),
         tableOutput("luca_plot_info"),
         
         
-        #h4('Read table'),
         tableOutput('edds'),
         tableOutput('flowjo'),
         tableOutput('dosing'),
@@ -71,7 +52,6 @@ ui <- fluidPage(
       ) # mainPanel
       
     ),
-    # Navbar 1, tabPanel
 
         
     tabPanel("TMDD", 
@@ -100,14 +80,12 @@ ui <- fluidPage(
                
              )
              
-             
              ),
   
   
   
     tabPanel("DCIA", "This panel is intentionally left blank"),
     tabPanel("SEC", "This panel is intentionally left blank"),
-    # tabPanel("EDDS_STITCH", "This panel is intentionally left blank"),
     tabPanel("MIXING"),
     tabPanel("WORKFLOW", "This panel is intentionally left blank",
     
@@ -208,7 +186,8 @@ server <- function(input, output, session) {
   EDDS_combined <- reactive({
     
     req(edds(), mfi_choices(), flowjo(), dosing())
-    EDDS_combined_processing(edds(),mfi_choices(),flowjo(),dosing())
+    
+    EDDS_combined_processing(edds(),mfi_choices(),flowjo(),dosing()) #pass files to function to combine all files
     
     
   })
@@ -221,47 +200,7 @@ server <- function(input, output, session) {
     req(mfi_choices())
     req(control_mabs())
     
-    edds_dn <- EDDS_combined()
-    
-    edds_dn <-  edds_dn |> 
-      mutate(`Viability` = `Cell count_morphology_live` / `Cell count_morphology`,
-             `Cell fraction_gated` = `Cell count_morphology_live` /`Cell count_total`) |> 
-      group_by(`Experiment date`, `Biosample ID`, `Incubation time`) %>%
-      do(mock_sub(.,mfi_choices())) |>
-      mutate(
-        '{mfi_choices()}_BG subtracted_dose normalized' := .data[[paste0(mfi_choices(), '_BG subtracted')]] /
-          `Fluorescence_dosing solution`
-      ) 
-    
-    
-    edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
-                                   regex('mock', ignore_case = TRUE))) %>%
-      group_by(`Experiment date`,
-               `Tapir ID_unlabeled molecule (parent)`,
-               `Biosample ID`) %>%
-      do(lm_wo_normpoint = lm(.[[paste0(mfi_choices(), '_BG subtracted_dose normalized')]] ~ 0 + .[['Incubation time']],data = .)
-      ) -> model_wo.pointnorm
-    
-    edds_dn <- open_model(model_wo.pointnorm,'lm_wo_normpoint',edds_dn)
-    
-    
-    edds_dn <- edds_dn %>% ungroup() %>% group_by(`Experiment date`,`Biosample ID`) %>%
-      do(min_max_day(.,control_mabs(),'estimate__lm_wo_normpoint')) %>% ungroup()
-    
-    
-    
-    edds_dn <-
-      edds_dn %>% 
-      group_by(`Experiment date`, `Biosample ID`) %>% 
-      do(point_norm(., mfi_choices(), control_mabs())) %>% ungroup()
-    
-    model_w.pointnorm <- edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
-                                                        regex('mock', ignore_case = TRUE))) %>% 
-      group_by(`Tapir ID_unlabeled molecule (parent)`,`Biosample ID`) %>%
-      do(lm_w_normpoint = lm(.[[paste0(mfi_choices(), '_BG subtracted_dose_control normalized')]] ~ 0 + .[['Incubation time']],data = .))
-    
-    edds_dn <- open_model(model_w.pointnorm,'lm_w_normpoint',edds_dn)
-    
+    edds_analysis(EDDS_combined(),mfi_choices(),control_mabs())
 
   })
   
@@ -406,7 +345,7 @@ server <- function(input, output, session) {
   
   output$mfi_choices_list <- reactive({
     req(flowjo())
-    names(flowjo())[(which(flowjo() |> names()  == 'ultimate_gate') + 1):length(flowjo())]
+    names(flowjo())[(which(flowjo() |> names()  == "Cell count_morphology") + 1):length(flowjo())]
   })
   
   

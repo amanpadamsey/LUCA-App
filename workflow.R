@@ -1,3 +1,4 @@
+#!/usr/bin/Rscript
 #this function uses the functions in functions.R and does the downstream processing
 #this is also a ground for testing the whole workflow
 source("functions.R")
@@ -6,22 +7,24 @@ source("libraries.R")
 
 # name == main functionality in R -----------------------------------------
 
-
-main <- function() {
-  
-  edds_datapath <<- "./tmdd testing/edds_test.csv" #comment out when finished testing
-  flowjo_datapath_list <<- "./test flowjo export/" %>% list.files(full.names = TRUE) 
-  dosing_datapath <<-  "./test tecan readout/" %>% list.files(full.names = TRUE) 
+if (sys.nframe() == 0){
+  # edds_datapath <<- "./tmdd testing/edds_test.csv" #comment out when finished testing
+  # flowjo_datapath_list <<- "./test flowjo export/" %>% list.files(full.names = TRUE)
+  # dosing_datapath <<-  "./test tecan readout/" %>% list.files(full.names = TRUE) 
+  # control_mabs <<- c("P1AF1537","P1AA4006")
+  # mfi_choices <<- "Geometric Mean : pHAb-A"
+  # 
+  edds_datapath <<- "./testing Jo data/20230524_edds_nextCD3.csv" #comment out when finished testing
+  flowjo_datapath_list <<- "./testing Jo data/Flow jo 16-May-2023.xls"
+  dosing_datapath <<-  "./testing Jo data/" %>% list.files(full.names = TRUE,pattern = ".xlsx") 
   control_mabs <<- c("P1AF1537","P1AA4006")
   mfi_choices <<- "Geometric Mean : pHAb-A"
+  
+  
+  
+  
 }
 
-if (getOption('run.main', default=TRUE)) {
-  main()
-}
-
-
-# end main script ---------------------------------------------------------
 
 # read and process edds file ----------------------------------------------
 
@@ -37,10 +40,10 @@ edds_read <- function(edds_datapath){
            `Incubation time` = as.numeric(`Incubation time`)) %>% 
     tryCatch(warning = function(err){cat("Could not parse date in EDDS, please
                                           check whether format is y-m-d")
-      message(err)}, 
+      showNotification(err)}, 
       error = function(err){cat("Could not parse date in EDDS, please
                                           check whether format is y-m-d")
-        message(err)}) # stop if date parsing error or warning
+        showNotification(err)}) # stop if date parsing error or warning
   
 }
 
@@ -75,7 +78,7 @@ edds_process <- function(edds_datapath) {
     dups <- edds %>% filter(`Tapir ID_unlabeled molecule (parent)` != 'MOCK') %>% 
       group_by(`Tapir ID_unlabeled molecule (parent)`) %>%  summarise(n = n()) %>% ungroup()
     
-    message(paste("Following TAPIR IDS were unequal in replicates",
+    showNotification(paste("Following TAPIR IDS were unequal in replicates",
                   capture.output(print(dups)), collapse = "\n"))
     
   }
@@ -154,13 +157,16 @@ flowjo_processing <- function(flowjo_datapath_list) {
   
   fj <- flow_jo_clean(flowjo_datapath_list)
   
-  na_vals <- fj %>% complete.cases() %>% any() #check for missing values
-  if (na_vals) {
+  na_vals <- fj %>% complete.cases() %>% all() #check for missing values, equals TRUE when no missing values present
+  shinyFeedback::feedbackWarning("flowjo",!na_vals,"flowjo contains missing values")
+  # if(na_vals) showNotification("hello there")
+  if (!na_vals) {
     na_row <- fj[!(fj %>% complete.cases()),]
     #map(fj,is.na) %>% map(\(.x) unlist(.x) %>% which(isTRUE(.x))) %>% unlist() %>% as.character()
-    message(paste("Following rows had missing values",
-                  capture.output(print(na_row)), collapse = "\n"))
-    message("Ensure the naming convention of the wells are as follows: Plate xyz_B4_B04")
+    showNotification(fj[fj %>% complete.cases() %>% !. ,c("Well number","Plate number")] %>% print() %>% capture.output() %>% paste(collapse = "\n"),
+                     duration = NULL)
+    
+    # showNotification("Ensure the naming convention of the wells are as follows: Plate xyz_B4_B04")
   }
   # shinyFeedback::feedbackWarning('flowjo',na_vals,'Flowjo file contains missing values')
   # req(!na_vals) 
@@ -173,7 +179,7 @@ flowjo_processing <- function(flowjo_datapath_list) {
   fj <- fj %>% select(-ultimate_gate) #remove unnecesary column from data
   
   if (fj[,-c(1,2)] %>% map(is.numeric) %>% unlist() %>% all() %>% !.) {
-    message("Flowjo file cannot be parsed as numbers, please check format")
+    showNotification("Flowjo file cannot be parsed as numbers, please check format")
   }
   
   
@@ -207,7 +213,7 @@ dosing_sol_clean <- function(dosing_datapath) {
 }
 
 
-#process the dosing solution file and message warnings
+#process the dosing solution file and showNotification warnings
 
 dosing_processing <- function(dosing_datapath) {
   ds <- lapply(dosing_datapath, dosing_sol_clean) |> bind_rows(.id = "column_label")
@@ -252,7 +258,7 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
     #   dosing$`Tapir ID_unlabeled molecule (parent)`
     # ) %>%
     # is.na() %>% any()) {
-    #   message(paste(
+    #   showNotification(paste(
     #     "Following rows had missing values",
     #     capture.output(print(na_row)),
     #     collapse = "\n"
@@ -266,10 +272,65 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
                 by = c('Plate number', 'Well number')) #|> View())
   }
   
+  na_vals_mfi <- edds_combined %>% filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>% 
+    select(mfi_choices) %>% is.na(.) %>% all() #checks whether there are any NA values in the geomean mfi column, returns TRUE if none
+  
+  
+  
+  if(!na_vals_mfi) showNotification("combined file has NA values, please check your input files",duration = NULL)
+  
   return(edds_combined)
 }
 
+
+
+# Mathematical manipulations on EDDS --------------------------------------
+
+
+
+
+edds_analysis <- function(edds_combined,mfi_choices,control_mabs) {
   
+  edds_dn <- edds_combined
+  
+  edds_dn <-  edds_dn |> 
+    mutate(`Viability` = `Cell count_morphology_live` / `Cell count_morphology`,
+           `Cell fraction_gated` = `Cell count_morphology_live` /`Cell count_total`) |> 
+    group_by(`Experiment date`, `Biosample ID`, `Incubation time`) %>%
+    do(mock_sub(.,mfi_choices)) |>
+    mutate(
+      '{mfi_choices}_BG subtracted_dose normalized' := .data[[paste0(mfi_choices, '_BG subtracted')]] /
+        `Fluorescence_dosing solution`
+    ) 
+  
+  
+  edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
+                                 regex('mock', ignore_case = TRUE))) %>%
+    group_by(`Experiment date`,
+             `Tapir ID_unlabeled molecule (parent)`,
+             `Biosample ID`) %>%
+    do(lm_wo_normpoint = lm(.[[paste0(mfi_choices, '_BG subtracted_dose normalized')]] ~ 0 + .[['Incubation time']],data = .)
+    ) -> model_wo.pointnorm
+  
+  edds_dn <- open_model(model_wo.pointnorm,'lm_wo_normpoint',edds_dn)
+  
+  
+  edds_dn <- edds_dn %>% ungroup() %>% group_by(`Experiment date`,`Biosample ID`) %>%
+    do(min_max_day(.,control_mabs,'estimate__lm_wo_normpoint')) %>% ungroup()
+  
+  
+  
+  edds_dn <-
+    edds_dn %>% 
+    group_by(`Experiment date`, `Biosample ID`) %>% 
+    do(point_norm(., mfi_choices, control_mabs)) %>% ungroup()
+  
+  model_w.pointnorm <- edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
+                                                      regex('mock', ignore_case = TRUE))) %>% 
+    group_by(`Tapir ID_unlabeled molecule (parent)`,`Biosample ID`) %>%
+    do(lm_w_normpoint = lm(.[[paste0(mfi_choices, '_BG subtracted_dose_control normalized')]] ~ 0 + .[['Incubation time']],data = .))
+  
+  edds_dn <- open_model(model_w.pointnorm,'lm_w_normpoint',edds_dn)
 
-
+}
 
