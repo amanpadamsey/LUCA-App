@@ -87,7 +87,68 @@ edds_process <- function(edds_datapath) {
 }
 
 
+
+
+# flowjo cleaning ---------------------------------------------------------
+
+
+flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (path)
+  
+  
+  semi_clean <- lapply(flowjo_datapath_list,readxl::read_excel,col_types = c('text','text','numeric','numeric'),trim_ws = TRUE) |>  #read all flowjo files
+    
+    # map2(str_extract(list_flowjo_names,'\\d+-\\w+-\\d+') %>% lapply(.,parse_date,format='%d-%b-%Y'),\(x,y) x |>  mutate(`Experiment date` = y)) |>  #parse date and add column
+    # map2(str_extract(list_flowjo_names,'(\\d)hr',group=1),\(x,y) x |>  mutate(`Incubation time (hrs)` = as.numeric(y))) |> #add Incubation time (hrs) from filename
+    # 
+    bind_rows(.id = "column_label") |> #combine read files into one big dataframe
+    
+    mutate(across(where(is.character), str_trim)) |> 
+    
+    mutate(`Well number` = str_extract(Name,'(...)\\.fcs$', group=1),
+           `Plate number` = str_extract(Name,regex("plate.(\\w+)_.*_",ignore_case = TRUE), group=1)) |> #add well number and plate number
+    
+    fill(`Well number`,`Plate number`) #filldown 
+  
+  
+  uni_depth <- unique(semi_clean$Depth) #find depth levels in df
+  
+  stats_flow <- grepl('=',semi_clean$Name) #find all rows with '='
+  
+  semi_clean$Var <- NA
+  
+  
+  semi_clean$Var[stats_flow] <- semi_clean$Name[stats_flow] %>%  #find all rows with '='
+    map(~unlist(str_split(.,' = '))[1]) |> unlist() #split strings and select variable name for new column Var
+  
+  
+  semi_clean |> mutate(`Cell count_total` = case_when(is.na(Depth)~`#Cells`), 
+                       `Cell count_morphology_live` = case_when(Depth == uni_depth[length(uni_depth)-1] ~ `#Cells`),
+                       `Cell count_morphology` = case_when(Depth == uni_depth[length(uni_depth)-2] ~ `#Cells`),
+                       `Plate number` = as.character(`Plate number`),
+                       ultimate_gate = case_when(Depth == uni_depth[length(uni_depth)-1] ~ str_extract(Name, '[^/](\\w*)\\S$'))) |> 
+    
+    pivot_wider(names_from = 'Var',values_from = 'Statistic')  |> 
+    
+    group_by(`Well number`,`Plate number`) |> 
+    
+    fill(everything(), .direction='downup') |> 
+    
+    select(-c(Depth:`#Cells`,`NA`,column_label)) |> 
+    
+    unique() 
+  
+  
+}
+
+
+
+
+
+
 # flowjo processing -------------------------------------------------------
+
+
+
 
 flowjo_processing <- function(flowjo_datapath_list) {
   
@@ -185,6 +246,19 @@ EDDS_combined_processing <- function(edds,mfi_choices) {
     
   } else {
     req(flowjo, dosing)
+    #check if there are no common elements 
+    # if (match( 
+    #   edds$`Tapir ID_unlabeled molecule (parent)`,
+    #   dosing$`Tapir ID_unlabeled molecule (parent)`
+    # ) %>%
+    # is.na() %>% any()) {
+    #   message(paste(
+    #     "Following rows had missing values",
+    #     capture.output(print(na_row)),
+    #     collapse = "\n"
+    #   ))
+    #   
+    # }
     edds_combined <- left_join(edds,
                                dosing,
                                by = c("Experiment date", "Tapir ID_unlabeled molecule (parent)")) |>

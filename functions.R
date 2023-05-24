@@ -107,25 +107,6 @@ flow_jo_clean <- function(list_flowjo_paths) { #enter list of flowjo files (path
 
 
 
-# read and clean edds csv -------------------------------------------------
-edds_read <- function(edds_path){
-  read_delim(edds_path,
-           trim_ws = TRUE, na =  c("", "NA")) |>
-    mutate(across(where(is.character), str_trim)) |> 
-    mutate(`Experiment date` = ymd(`Experiment date`), #parse date
-           `Tapir ID_unlabeled molecule (parent)` = 
-             toupper(`Tapir ID_unlabeled molecule (parent)`),
-           `Incubation time` = as.numeric(`Incubation time`)) %>% 
-     tryCatch(warning = function(err){cat("Could not parse date in EDDS, please
-                                          check whether format is y-m-d")
-      message(err)}, 
-      error = function(err){cat("Could not parse date in EDDS, please
-                                          check whether format is y-m-d")
-        message(err)}) # stop if date parsing error or warning
-    
-}
-  
-
 
 
 # mock subtract -----------------------------------------------------------
