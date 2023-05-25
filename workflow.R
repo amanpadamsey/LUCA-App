@@ -15,13 +15,23 @@ if (sys.nframe() == 0){
   # mfi_choices <<- "Geometric Mean : pHAb-A"
   # 
   edds_datapath <<- "./testing Jo data/20230524_edds_nextCD3.csv" #comment out when finished testing
-  flowjo_datapath_list <<- "./testing Jo data/" %>% list.files(pattern = "Flow",full.names = TRUE)
+  # flowjo_datapath_list <<- "./testing Jo data/" %>% list.files(pattern = "Flow",full.names = TRUE)
   dosing_datapath <<-  "./testing Jo data/" %>% list.files(full.names = TRUE,pattern = ".xlsx") 
   control_mabs <<- c("P1AF1537","P1AA4006")
   mfi_choices <<- "Geometric Mean : pHAb-A"
   type_lm <<- "wo"  
   
+  flowjo_datapath_list <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\flowjo files/combined3.xlsx)"
   
+  
+  edds_combined <- EDDS_combined_processing(
+    edds_process(edds_datapath),
+    mfi_choices,
+    flowjo_processing(flowjo_datapath_list),
+    dosing_processing(dosing_datapath)
+  )
+  
+  edds_dn <<- edds_analysis(edds_combined,mfi_choices,control_mabs)
   
 }
 
@@ -124,7 +134,7 @@ flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (p
     map(~unlist(str_split(.,' = '))[1]) |> unlist() #split strings and select variable name for new column Var
   
   
-  semi_clean |> mutate(`Cell count_total` = case_when(is.na(Depth)~`#Cells`), 
+  semi_clean |> mutate(`Cell count_total` = case_when(is.na(Statistic)~`#Cells`), 
                        `Cell count_morphology_live` = case_when(Depth == uni_depth[length(uni_depth)-1] ~ `#Cells`),
                        `Cell count_morphology` = case_when(Depth == uni_depth[length(uni_depth)-2] ~ `#Cells`),
                        `Plate number` = as.character(`Plate number`),
@@ -469,15 +479,35 @@ files_to_write <- function(edds_dn, mfi_choices) { #returns list of files that c
 
 
 
-# workflow in functional calls --------------------------------------------
+# Plotting --------------------------------------------
 
 
 if(sys.nframe() == 0){
   
+  plot_hist <- function(edds_dn,plot_col,y_label,x_label = "TAPIR ID") {
   
   
-  
-  
-  
+  edds_dn %>% distinct(
+                    `Tapir ID_unlabeled molecule (parent)`,
+                    .keep_all = TRUE) %>%  filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>% 
+    ggplot(aes(`Tapir ID_unlabeled molecule (parent)`,
+               {{plot_col}}
+                    )) + coord_flip() + 
+    ylab(y_label) + 
+    xlab(x_label) 
+
 }
 
+plot_hist(edds_dn, min_max_estimate__lm_wo_normpoint, 
+          y_label = "luca",
+          ) +
+geom_boxplot() +
+  geom_point(aes(col = as.factor(`Experiment date`))) 
+
+
+
+
+plot_hist(edds_dn, estimate__lm_w_normpoint, y_label = "luca") +
+  geom_bar(stat = "identity")
+
+}
