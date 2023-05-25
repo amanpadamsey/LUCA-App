@@ -458,10 +458,10 @@ files_to_write <- function(edds_dn, mfi_choices) { #returns list of files that c
   #total_graphpad %>% length()
   names(total_graphpad) <- c("rawdata_BG subtracted_dose normalized.csv",
                              "rawdata_BG subtracted_dose_control normalized.csv",
-                             "control normalized slopes.csv",
+                             "control normalized slopes diff days.csv",
                              "slope_stderr_days.csv")
 
-  return(total_graphpad)
+  total_graphpad
   
   
   }
