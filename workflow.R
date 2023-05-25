@@ -346,7 +346,7 @@ blend_df <- function(df) {
 }
 
 
-
+# reshape edds_dn to slope and std.err format
 slope_stderr_format <- function(edds_dn, type_lm) { 
   
   slope <- paste0("estimate__lm_",type_lm,"_normpoint")
@@ -366,7 +366,7 @@ slope_stderr_format <- function(edds_dn, type_lm) {
 }
 
 
-
+#combine reshaped formats for both separate days as well as combined days
 slope_stderr_combine <- function(edds_dn) {
   
   indi_vals <- edds_dn %>% group_by(`Experiment date`) %>% 
@@ -386,7 +386,7 @@ slope_stderr_combine <- function(edds_dn) {
 
 
 
-
+# reshape to facilitate min max normalized values for the different days
 normalized_days <- function(edds_dn) {
 
   
@@ -404,7 +404,7 @@ normalized_days <- function(edds_dn) {
   
 }
 
-#raw data 
+# write raw data for the different days, ... signifies additional arguments that could be included
 
 raw_data_edds <- function(edds_dn, mfi_choices, col_raw, ...) {
   
@@ -428,6 +428,7 @@ raw_data_edds <- function(edds_dn, mfi_choices, col_raw, ...) {
 }
 
 
+# combine raw data into a list for all days
 raw_data_edds_combine <- function(edds_dn, mfi_choices) {
   
   list(
@@ -464,7 +465,7 @@ files_to_write <- function(edds_dn, mfi_choices) { #returns list of files that c
   total_graphpad
   
   
-  }
+}
 
 
 
