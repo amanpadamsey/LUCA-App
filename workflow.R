@@ -157,9 +157,9 @@ flowjo_processing <- function(flowjo_datapath_list) {
   fj <- flow_jo_clean(flowjo_datapath_list)
   
   na_vals <- fj %>% complete.cases() %>% all() #check for missing values, equals TRUE when no missing values present
-  shinyFeedback::feedbackWarning("flowjo",!na_vals,"flowjo contains missing values")
   # if(na_vals) showNotification("hello there")
   if (!na_vals) {
+    shinyFeedback::feedbackWarning("flowjo",!na_vals,"flowjo contains missing values")
     na_row <- fj[!(fj %>% complete.cases()),]
     #map(fj,is.na) %>% map(\(.x) unlist(.x) %>% which(isTRUE(.x))) %>% unlist() %>% as.character()
     showNotification(fj[fj %>% complete.cases() %>% !. ,c("Well number","Plate number")] %>% print() %>% capture.output() %>% paste(collapse = "\n"),
@@ -469,4 +469,15 @@ files_to_write <- function(edds_dn, mfi_choices) { #returns list of files that c
 
 
 
+# workflow in functional calls --------------------------------------------
+
+
+if(sys.nframe() == 0){
+  
+  
+  
+  
+  
+  
+}
 
