@@ -19,7 +19,7 @@ if (sys.nframe() == 0){
   dosing_datapath <<-  "./testing Jo data/" %>% list.files(full.names = TRUE,pattern = ".xlsx") 
   control_mabs <<- c("P1AF1537","P1AA4006")
   mfi_choices <<- "Geometric Mean : pHAb-A"
-  
+  type_lm <<- "wo"  
   
   
   
@@ -142,7 +142,6 @@ flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (p
   
   
 }
-
 
 
 
@@ -273,11 +272,11 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
   }
   
   na_vals_mfi <- edds_combined %>% filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>% 
-    select(mfi_choices) %>% is.na(.) %>% any() #checks whether there are any NA values in the geomean mfi column, returns TRUE if none
+    select(mfi_choices) %>% is.na(.) %>% any() #checks whether there are any NA values in the geomean mfi column, returns FALSE if none
   
   
   
-  if(!na_vals_mfi) showNotification("combined file has NA values, please check your input files",duration = NULL)
+  if(na_vals_mfi) showNotification("combined file has NA values, please check your input files",duration = NULL)
   
   return(edds_combined)
 }
@@ -347,7 +346,6 @@ blend_df <- function(df) {
 }
 
 
-if(sys.nframe() == 0)type_lm = "wo"
 
 slope_stderr_format <- function(edds_dn, type_lm) { 
   
@@ -408,13 +406,13 @@ normalized_days <- function(edds_dn) {
 
 #raw data 
 
-raw_data_edds <- function(edds_dn, mfi_choices, col_raw) {
+raw_data_edds <- function(edds_dn, mfi_choices, col_raw, ...) {
   
   raw_data_edds_ <- edds_dn %>% ungroup() %>% arrange(`Experiment date`) %>% 
     filter(`Tapir ID_unlabeled molecule (parent)` != "MOCK") %>%
     select(
     `Tapir ID_unlabeled molecule (parent)`,
-    `Incubation time`,
+    `Incubation time`,...,
     # !!as.name(paste0(mfi_choices,"_BG subtracted")),
     !!as.name(col_raw)
   ) %>% pivot_wider(
@@ -436,7 +434,8 @@ raw_data_edds_combine <- function(edds_dn, mfi_choices) {
     raw_data_edds(
       edds_dn,
       mfi_choices,
-      paste0(mfi_choices, "_BG subtracted_dose normalized")
+      paste0(mfi_choices, "_BG subtracted_dose normalized"),
+      !!as.name("Experiment date")
     ),
     raw_data_edds(
       edds_dn,
@@ -459,9 +458,13 @@ files_to_write <- function(edds_dn, mfi_choices) { #returns list of files that c
   #total_graphpad %>% length()
   names(total_graphpad) <- c("rawdata_BG subtracted_dose normalized.csv",
                              "rawdata_BG subtracted_dose_control normalized.csv",
-                             "")
+                             "control normalized slopes.csv",
+                             "slope_stderr_days.csv")
 
-}
+  return(total_graphpad)
+  
+  
+  }
 
 
 

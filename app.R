@@ -444,11 +444,17 @@ server <- function(input, output, session) {
      temp_directory <- file.path(tempdir(), as.integer(Sys.time()))
      dir.create(temp_directory)
      
-     converted_abc_list() %>%
-       map2(tools::file_path_sans_ext(input$quickcal_conv_list$name),function(x,y){
+     
+     #write files
+     
+     list_to_write <- files_to_write(EDDS_combined_analysed(),mfi_choices())
+     
+     
+     list_to_write %>%
+       map2(names(list_to_write),function(x,y){
          if(!is.null(x)){
-           file_name <- glue("{y}_abc.csv")
-           readr::write_csv(x, file.path(temp_directory, file_name),col_names = FALSE)
+           file_name <- y
+           readr::write_csv(x, file.path(temp_directory, file_name))
          }
        })
      
