@@ -424,7 +424,7 @@ raw_data_edds <- function(edds_dn, mfi_choices, col_raw, ...) {
   
   names(raw_data_edds_)[-1] <- map_chr(names(raw_data_edds_[-1]), ~ str_extract(.x,"(.*)_",group = 1))
   
-  return(raw_data_edds_)
+  raw_data_edds_
 }
 
 
