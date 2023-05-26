@@ -111,6 +111,14 @@ ui <- fluidPage(
                
              )),
     
+    tabPanel("CHECKS",
+            renderTable("unique_tapir") 
+             
+             
+             
+             
+             ),
+    
     
     tabPanel("HOMER",
              
