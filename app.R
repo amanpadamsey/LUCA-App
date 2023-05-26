@@ -303,7 +303,7 @@ server <- function(input, output, session) {
       geom_point() +
       # facet_wrap(vars(`Tapir ID_unlabeled molecule (parent)`)) + 
       expand_limits(x = 0, y = 0) +
-      facet_grid(rows=vars(`Experiment date`),cols = vars(`Tapir ID_unlabeled molecule (parent)`))
+      facet_grid(rows=vars(`Experiment date`,`Biosample ID`),cols = vars(`Tapir ID_unlabeled molecule (parent)`))
 
   })
 #   
@@ -316,12 +316,12 @@ server <- function(input, output, session) {
 #   
 #   
 #   
-#   output$luca_plot <- renderPlot({
-#     req(EDDS_combined_analysed())
-#     test_edds |> ggplot(aes(`Tapir ID_unlabeled molecule (parent)`,slope)) +
-#       geom_boxplot() + geom_jitter() 
-#     
-#   })
+  output$luca_plot <- renderPlot({
+    req(EDDS_combined_analysed())
+    edds_dn |> ggplot(aes(`Tapir ID_unlabeled molecule (parent)`,)) +
+      geom_boxplot() + facet_wrap(vars(`Biosample ID`)) +#geom_point(aes(col = as.factor(`Biosample ID`))) 
+      coord_flip()
+  })
 #   
 #   output$luca_plot_info <- renderTable({
 #     req(EDDS_combined_analysed())
@@ -447,7 +447,7 @@ server <- function(input, output, session) {
      
      #write files
      
-     list_to_write <- files_to_write(EDDS_combined_analysed(),mfi_choices())
+     list_to_write <- files_towrite_biosamp(EDDS_combined_analysed(),mfi_choices())
      
      
      list_to_write %>%

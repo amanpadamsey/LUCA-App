@@ -3,7 +3,7 @@
 #this is also a ground for testing the whole workflow
 source("functions.R")
 source("libraries.R")
-
+#to do: make overview of count function for dataframe
 
 # name == main functionality in R -----------------------------------------
 
@@ -13,18 +13,22 @@ if (sys.nframe() == 0){
   # dosing_datapath <<-  "./test tecan readout/" %>% list.files(full.names = TRUE) 
   # control_mabs <<- c("P1AF1537","P1AA4006")
   # mfi_choices <<- "Geometric Mean : pHAb-A"
-  # 
-  edds_datapath <<- "./testing Jo data/20230524_edds_nextCD3.csv" #comment out when finished testing
-  # flowjo_datapath_list <<- "./testing Jo data/" %>% list.files(pattern = "Flow",full.names = TRUE)
-  dosing_datapath <<-  "./testing Jo data/" %>% list.files(full.names = TRUE,pattern = ".xlsx") 
-  control_mabs <<- c("P1AF1537","P1AA4006")
+  
+  #Johannes data 
+
+  # edds_datapath <<- "./testing Jo data/20230524_edds_nextCD3.csv" #comment out when finished testing
+  # # flowjo_datapath_list <<- "./testing Jo data/" %>% list.files(pattern = "Flow",full.names = TRUE)
+  # dosing_datapath <<-  "./testing Jo data/" %>% list.files(full.names = TRUE,pattern = ".xlsx") 
+  control_mabs <<- c("P1AF1935","P1AF1939")
   mfi_choices <<- "Geometric Mean : pHAb-A"
   type_lm <<- "wo"  
   
-  flowjo_datapath_list <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\flowjo files/combined3.xlsx)"
+  edds_datapath <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/edds DCIAgtVA2.csv)"
+  flowjo_datapath_list <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/flowjo export.xlsx)"
+  dosing_datapath <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/dciagtva2 dosing.xlsx)"
   
   
-  edds_combined <- EDDS_combined_processing(
+  edds_combined <<- EDDS_combined_processing(
     edds_process(edds_datapath),
     mfi_choices,
     flowjo_processing(flowjo_datapath_list),
@@ -138,17 +142,19 @@ flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (p
                        `Cell count_morphology_live` = case_when(Depth == uni_depth[length(uni_depth)-1] ~ `#Cells`),
                        `Cell count_morphology` = case_when(Depth == uni_depth[length(uni_depth)-2] ~ `#Cells`),
                        `Plate number` = as.character(`Plate number`),
-                       ultimate_gate = case_when(Depth == uni_depth[length(uni_depth)-1] ~ str_extract(Name, '[^/](\\w*)\\S$'))) |> 
+                       ultimate_gate = case_when(Depth == uni_depth[length(uni_depth)-1] ~ str_extract(Name, '[^/](\\w*)\\S$'))) |>
+    fill(everything(),.direction = "downup") %>% 
+    filter(str_detect(Name,"=")) %>%  
     
     pivot_wider(names_from = 'Var',values_from = 'Statistic')  |> 
     
     group_by(`Well number`,`Plate number`) |> 
     
-    fill(everything(), .direction='downup') |> 
+    #fill(everything(), .direction='downup') |> 
     
-    select(-c(Depth:`#Cells`,`NA`,column_label)) |> 
+    select(-c(Depth:`#Cells`,column_label)) #|> 
     
-    unique() 
+    # unique() 
   
   
 }
@@ -173,7 +179,7 @@ flowjo_processing <- function(flowjo_datapath_list) {
     na_row <- fj[!(fj %>% complete.cases()),]
     #map(fj,is.na) %>% map(\(.x) unlist(.x) %>% which(isTRUE(.x))) %>% unlist() %>% as.character()
     showNotification(fj[fj %>% complete.cases() %>% !. ,c("Well number","Plate number")] %>% print() %>% capture.output() %>% paste(collapse = "\n"),
-                     duration = NULL)
+                      duration = NULL)
     
     # showNotification("Ensure the naming convention of the wells are as follows: Plate xyz_B4_B04")
   }
@@ -467,15 +473,29 @@ files_to_write <- function(edds_dn, mfi_choices) { #returns list of files that c
     append(list(slope_stderr_combine(edds_dn)))
   
   #total_graphpad %>% length()
-  names(total_graphpad) <- c("rawdata_BG subtracted_dose normalized.csv",
-                             "rawdata_BG subtracted_dose_control normalized.csv",
-                             "control normalized slopes diff days.csv",
-                             "slope_stderr_days.csv")
+  
+  names(total_graphpad) <- c(glue("rawdata_BG subtracted_dose normalized_{edds_dn$`Biosample ID`[1]}.csv"),
+                             glue("rawdata_BG subtracted_dose_control normalized{edds_dn$`Biosample ID`[1]}.csv"),
+                             glue("control normalized slopes diff days{edds_dn$`Biosample ID`[1]}.csv"),
+                             glue("slope_stderr_days{edds_dn$`Biosample ID`[1]}.csv"))
 
   total_graphpad
   
   
 }
+
+
+
+#check whether you can split for biosample ID
+
+
+files_towrite_biosamp <- function(edds_dn, mfi_choices) {
+  
+  edds_dn %>% group_by(`Biosample ID`) %>% group_split() %>% 
+    map(~files_to_write(.x,mfi_choices)) %>% unlist(recursive = FALSE)
+
+}
+  
 
 
 
@@ -509,5 +529,12 @@ geom_boxplot() +
 
 plot_hist(edds_dn, estimate__lm_w_normpoint, y_label = "luca") +
   geom_bar(stat = "identity")
+
+
+#remove every alternate tapir name
+
+"P1AF1935	P1AF1935	P1AG2421-043	P1AG2421-043	P1AG2421-050	P1AG2421-050	P1AG2422-036	P1AG2422-036	P1AG2422-045	P1AG2422-045	P1AJ6195-010	P1AJ6195-010	P1AF1939	P1AF1939
+" %>% str_s
+clipr::write_clip()
 
 }
