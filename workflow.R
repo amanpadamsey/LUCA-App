@@ -498,7 +498,25 @@ files_towrite_biosamp <- function(edds_dn, mfi_choices) {
   
 
 
+# make plate layout -------------------------------------------------------
+# fj <- flowjo_processing(flowjo_datapath_list)
 
+
+
+ plate_layout <- function(flowjo) {
+  
+   flowjo %>% 
+    group_by(`Plate number`) %>% 
+    group_split() %>% 
+    map(~ .x %>% 
+    separate(`Well number`, into = c("Row", "Col"), sep = 1) %>%
+    mutate(Col = as.numeric(Col)) %>% 
+    select(-`Plate number`) %>% 
+    pivot_wider(names_from = Col, values_from = -c(Row,Col)) %>% 
+    arrange(Row) 
+    ) 
+
+ }
 # Plotting --------------------------------------------
 
 

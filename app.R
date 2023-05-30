@@ -87,6 +87,19 @@ ui <- fluidPage(
     tabPanel("DCIA", "This panel is intentionally left blank"),
     tabPanel("SEC", "This panel is intentionally left blank"),
     tabPanel("MIXING"),
+    tabPanel("96 PLATE",
+             sidebarPanel(
+               tags$h3("Convert flowjo export into 96 well plate layout"),
+               fileInput("plate","Upload flowjofile export file",multiple = TRUE,accept = c(".xls",".xlsx")),
+               downloadButton("download_plate", "Download converted files")
+               
+               
+             )
+             
+             
+             
+             
+             ),
     tabPanel("WORKFLOW", "This panel is intentionally left blank",
     
              imageOutput('workflow', width = 'auto')
@@ -440,7 +453,56 @@ server <- function(input, output, session) {
  )
   
   
-  
+ 
+
+# 96 plate ----------------------------------------------------------------
+
+plate <- reactive({
+  req(input$plate)
+  flowjo_processing(input$plate$datapath) %>% 
+  plate_layout()
+
+}) 
+ 
+
+output$download_plate <- downloadHandler(
+   filename = function(){
+     paste("converted_data", Sys.Date(), ".zip", sep = "")
+   },
+   content = function(file){
+     
+     temp_directory <- file.path(tempdir(), as.integer(Sys.time()))
+     dir.create(temp_directory)
+     
+     
+     #write files
+     
+     list_to_write <- plate()
+     
+     list_to_write %>%
+       map2(names(list_to_write),function(x,y){
+         if(!is.null(x)){
+           file_name <- y
+           readr::write_csv(x, file.path(temp_directory, file_name))
+         }
+       })
+     
+     
+     zip::zip(
+       zipfile = file,
+       files = dir(temp_directory),
+       root = temp_directory
+     )
+     
+     
+     
+   },
+   contentType = "application/zip"
+   
+ )
+ 
+ 
+ 
   
 # DOWNLOAD ----------------------------------------------------------------
  output$download_pzfx <- downloadHandler(
