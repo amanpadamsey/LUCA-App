@@ -467,7 +467,7 @@ plate <- reactive({
 
 output$download_plate <- downloadHandler(
    filename = function(){
-     paste("converted_data", Sys.Date(), ".zip", sep = "")
+     paste("96plate_converted_data", Sys.Date(), ".zip", sep = "")
    },
    content = function(file){
      

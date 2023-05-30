@@ -499,7 +499,7 @@ files_towrite_biosamp <- function(edds_dn, mfi_choices) {
 
 
 # make plate layout -------------------------------------------------------
-# fj <- flowjo_processing(flowjo_datapath_list)
+# flowjo <- flowjo_processing(flowjo_datapath_list)
 
 
 
@@ -514,8 +514,11 @@ files_towrite_biosamp <- function(edds_dn, mfi_choices) {
     select(-`Plate number`) %>% 
     pivot_wider(names_from = Col, values_from = -c(Row,Col)) %>% 
     arrange(Row) 
-    ) 
-
+    ) %>% set_names(paste0("Plate_",unique(flowjo$`Plate number`),".csv"))
+    
+   
+   
+   
  }
 # Plotting --------------------------------------------
 
