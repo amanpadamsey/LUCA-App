@@ -7,6 +7,9 @@ ui <- fluidPage(
   theme = shinytheme("slate"),
   navbarPage(
     "LUCA Analysis",
+    
+    
+    
     tabPanel(
       "LUCA",
       sidebarPanel(
@@ -87,6 +90,7 @@ ui <- fluidPage(
     tabPanel("DCIA", "This panel is intentionally left blank"),
     tabPanel("SEC", "This panel is intentionally left blank"),
     tabPanel("MIXING"),
+    
     tabPanel("96 PLATE",
              sidebarPanel(
                tags$h3("Convert flowjo export into 96 well plate layout"),
@@ -132,6 +136,21 @@ ui <- fluidPage(
              
              ),
     
+    # tabPanel("testinput",
+    #          sidebarPanel(
+    #            textInput("96_well_input")
+    #            
+    #            
+    #            
+    #          )
+    #          
+    #          
+    #          
+    #          
+    #          
+    #          
+    #          ),
+    # 
     
     tabPanel("HOMER",
              
@@ -459,7 +478,7 @@ server <- function(input, output, session) {
 
 plate <- reactive({
   req(input$plate)
-  flowjo_processing(input$plate$datapath) %>% 
+  flow_jo_clean(input$plate$datapath) %>% 
   plate_layout()
 
 }) 

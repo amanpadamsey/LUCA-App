@@ -5,10 +5,10 @@ account: padamsea
 server: rsconnect-pred.roche.com
 hostUrl: https://rsconnect-pred.roche.com/__api__
 appId: 625
-bundleId: 2658
+bundleId: 2688
 url: https://rsconnect-pred.roche.com/content/b519ab63-f200-4daa-9de6-0c0ca3563ab2/
-when: 1685018760.76372
-lastSyncTime: 1685018760.76375
+when: 1685446847.15102
+lastSyncTime: 1685446847.15105
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|test flowjo export/21-Dec-2022_2hr.xls|test flowjo export/21-Dec-2022_4hr.xls|test flowjo export/22-Dec-2022_2hr.xls|test flowjo export/22-Dec-2022_4hr.xls|test tecan readout/dciagtva2.xlsx|testing Jo data/2023-05-16 dosingsolution.xlsx|testing Jo data/2023-05-17 dosingsolution.xlsx|testing Jo data/20230524_edds_nextCD3.csv|testing Jo data/Flow jo 16-May-2023.xls|testing Jo data/Flow jo 17-May-2023.xls|tmdd_test.R
+ignoredFiles: .RData|test flowjo export/21-Dec-2022_2hr.xls|test flowjo export/21-Dec-2022_4hr.xls|test flowjo export/22-Dec-2022_2hr.xls|test flowjo export/22-Dec-2022_4hr.xls|test tecan readout/dciagtva2.xlsx|testing Jo data/2023-05-16 dosingsolution.xlsx|testing Jo data/2023-05-17 dosingsolution.xlsx|testing Jo data/20230524_edds_nextCD3.csv|testing Jo data/Flow jo 16-May-2023.xls|testing Jo data/Flow jo 17-May-2023.xls|tmdd testing

@@ -520,6 +520,53 @@ files_towrite_biosamp <- function(edds_dn, mfi_choices) {
    
    
  }
+
+
+# convert from 96 well format to edds -------------------------------------
+
+if(sys.nframe() == 0){
+  
+  start_well <- "B02"
+  # %>% str_to_upper()
+  test_paste_96 <- "275	121	107	938	102	160	130	3670
+564	208	181	1884	169	244	200	9985
+280	112	96	845	101	137	98	3609
+512	218	202	1866	184	259	193	9422
+351	183	196	998	161	218	199	3691
+633	318	284	1932	274	350	321	9502
+"
+  
+  
+  possible_rows <- LETTERS[1:8]
+  possible_cols <- 1:12
+  
+  start_row <- which(possible_rows == strsplit(start_well,"")[[1]][1])
+  start_col <- strsplit(start_well,"")[[1]] %>% tail(1) %>% as.numeric()
+  read_delim(test_paste_96,delim = "\t",col_names = NULL) %>% 
+    mutate(Row = possible_rows[start_row:(start_row + nrow(.) - 1)]) %>% 
+    pivot_longer(cols = -Row) %>% mutate(name = (parse_number(name) + start_row -1),
+                                         Well = if_else(name%/%10 == 0, 
+                                                        paste0(Row,"0",name),
+                                                        paste0(Row,name))) %>% 
+    select(Well,value)
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+}
+
+
+
+
+
+
 # Plotting --------------------------------------------
 
 
