@@ -399,23 +399,24 @@ server <- function(input, output, session) {
 
 # TMDD --------------------------------------------------------------------
   
- quickcal <- reactive({
-  req(input$quickcal)
-   quickcal <-  readxl::read_excel(input$quickcal$datapath)[7:10,3:4] %>% mutate(across(everything(),as.numeric))
-   colnames(quickcal) <- c('abc','bead_fl')  
-   return(quickcal)                                             
-                                                })
-  
-  
- to_abc <- reactive({
-   req(input$quickcal_conv_list)
-   
-   map(input$quickcal_conv_list$datapath,\(x) read_csv(x,col_names = FALSE) %>% 
-         mutate(across(everything(),as.numeric)))
-   
+  quickcal <- reactive({
+    req(input$quickcal)
+    quickcal <-  readxl::read_excel(input$quickcal$datapath)[7:10,3:4] %>% mutate(across(everything(),as.numeric))
+    colnames(quickcal) <- c('abc','bead_fl')  
+    return(quickcal)                                             
   })
- 
- 
+  
+  
+  to_abc <- reactive({
+    req(input$quickcal_conv_list)
+    
+    map(input$quickcal_conv_list$datapath,\(x) read_csv(x,col_names = FALSE) %>% 
+          mutate(across(everything(),as.numeric)))
+    
+  })
+
+  
+
    
  converted_abc_list <- reactive({
    
@@ -568,7 +569,11 @@ output$download_plate <- downloadHandler(
       paste0(tools::file_path_sans_ext(input$edds$name), ".csv")
     },
     content = function(file) {
-      write_csv(EDDS_combined_analysed(),file)
+      write_csv(EDDS_combined_analysed() %>% 
+                  rename_with(~str_replace(.x,"estimate","slope")) %>% 
+                  rename_with(~str_replace(.x,"_lm_w_normpoint","days_combined"))%>% 
+                  rename_with(~str_replace(.x,"_lm_wo_normpoint","days_individual"))
+                ,file)
   })
   # output$contents <- renderTable({
   # #   file <- input$two_hr
