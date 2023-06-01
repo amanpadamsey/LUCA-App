@@ -3,6 +3,7 @@
 #this is also a ground for testing the whole workflow
 source("functions.R")
 source("libraries.R")
+source("outlier_elimination.R")
 #to do: make overview of count function for dataframe
 
 # name == main functionality in R -----------------------------------------
@@ -304,10 +305,9 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
 
 
 
-edds_analysis <- function(edds_combined,mfi_choices,control_mabs) {
+edds_analysis <- function(edds_combined,mfi_choices,control_mabs,p) {
   
   edds_dn <- edds_combined
-  
   edds_dn <-  edds_dn |> 
     mutate(`Viability` = `Cell count_morphology_live` / `Cell count_morphology`,
            `Cell fraction_gated` = `Cell count_morphology_live` /`Cell count_total`) |> 
@@ -318,6 +318,11 @@ edds_analysis <- function(edds_combined,mfi_choices,control_mabs) {
         `Fluorescence_dosing solution`
     ) 
   
+  
+  edds_dn <- edds_dn %>% group_by(`Biosample ID`,`Incubation time`,`Tapir ID_unlabeled molecule (parent)`,
+                                        `Experiment date`) %>% 
+    do(outlier_rm(.,paste0(mfi_choices, '_BG subtracted_dose normalized'),p)) %>% 
+    ungroup()
   
   edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
                                  regex('mock', ignore_case = TRUE))) %>%

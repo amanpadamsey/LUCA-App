@@ -34,6 +34,7 @@ ui <- fluidPage(
           'control_mabs',
           'Select control antibodies in ascending order, separated by comma'
         ),
+        textInput("p","Enter desired p value for outlier elimination",value = 0.05),
         verbatimTextOutput('control_choices'),
         verbatimTextOutput('misc'),
         downloadButton("download_csv", "Download EDDS.csv"), downloadButton("download_pzfx", "Download Graphpad friendly .csv")
@@ -240,7 +241,7 @@ server <- function(input, output, session) {
     req(mfi_choices())
     req(control_mabs())
     
-    edds_analysis(EDDS_combined(),mfi_choices(),control_mabs())
+    edds_analysis(EDDS_combined(),mfi_choices(),control_mabs(),input$p)
 
   })
   
