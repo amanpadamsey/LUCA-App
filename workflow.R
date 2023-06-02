@@ -123,7 +123,7 @@ flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (p
     mutate(across(where(is.character), str_trim)) |> 
     
     mutate(`Well number` = str_extract(Name,'(...)\\.fcs$', group=1),
-           `Plate number` = str_extract(Name,regex("plate.(\\w+)_.*_",ignore_case = TRUE), group=1)) |> #add well number and plate number
+           `Plate number` = str_extract(Name,regex("plate(\\w+)_.*_",ignore_case = TRUE), group=1)) |> #add well number and plate number
     
     fill(`Well number`,`Plate number`) #filldown 
   
@@ -308,6 +308,7 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
 edds_analysis <- function(edds_combined,mfi_choices,control_mabs,p) {
   
   edds_dn <- edds_combined
+  
   edds_dn <-  edds_dn |> 
     mutate(`Viability` = `Cell count_morphology_live` / `Cell count_morphology`,
            `Cell fraction_gated` = `Cell count_morphology_live` /`Cell count_total`) |> 
@@ -319,12 +320,12 @@ edds_analysis <- function(edds_combined,mfi_choices,control_mabs,p) {
     ) 
   
   
-  edds_dn <- edds_dn %>% group_by(`Biosample ID`,`Incubation time`,`Tapir ID_unlabeled molecule (parent)`,
+  edds_dn_o <- edds_dn %>% group_by(`Biosample ID`,`Incubation time`,`Tapir ID_unlabeled molecule (parent)`,
                                         `Experiment date`) %>% 
     do(outlier_rm(.,paste0(mfi_choices, '_BG subtracted_dose normalized'),p)) %>% 
     ungroup()
   
-  edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
+  edds_dn_o %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
                                  regex('mock', ignore_case = TRUE))) %>%
     group_by(`Experiment date`,
              `Tapir ID_unlabeled molecule (parent)`,
@@ -332,7 +333,7 @@ edds_analysis <- function(edds_combined,mfi_choices,control_mabs,p) {
     do(lm_wo_normpoint = lm(.[[paste0(mfi_choices, '_BG subtracted_dose normalized')]] ~ 0 + .[['Incubation time']],data = .)
     ) -> model_wo.pointnorm
   
-  edds_dn <- open_model(model_wo.pointnorm,'lm_wo_normpoint',edds_dn)
+  edds_dn_o <- open_model(model_wo.pointnorm,'lm_wo_normpoint',edds_dn_o)
   
   
   edds_dn <- edds_dn %>% ungroup() %>% group_by(`Experiment date`,`Biosample ID`) %>%
@@ -571,16 +572,66 @@ if(sys.nframe() == 0){
 
 # TMDD --------------------------------------------------------------------
 
+read_quickcal <- function(quickcal_datapath) {
+  readxl::read_excel(quickcal_datapath,range = 'C9:D12',
+                                  col_types = 'numeric',
+                                  col_names = c('abc','bead_fl')
+                                  )  %>% 
+    mutate('Tapir ID_unlabeled molecule (parent)' = str_extract(quickcal_datapath,
+                                                                '/(\\w.+) ',
+                                                                group = 1))
+  
+}
 
 
+return_models_from_list <- function(quickcal_datapath_list){
+  
+  quickcals <- map(quickcal_datapath_list,read_quickcal) %>% bind_rows()
+  
+  fit <- lmLi
+  
+  models <- map(quickcals, ~ lm(log(abc) ~ log(bead_fl), data = .x))
+  
+}
+
+
+convert_to_abc <- function(df,col_g,col_f,col_t,models){
+  
+  
+  
+  
+  
+}
 
 
 if (sys.nframe() == 0){
   tmdd_file <- read_csv()
+  quickcal_datapath_list <-list.files(
+    "Z:\\eADME\\Experiments\\LUCA\\results\\2023-05-08 Repeat huMacorphages TMDD Trem2 for Manuscript\\Titration + Donors Experiment\\Day 1\\quickcal conversions\\human (FITC labelled antibodies)\\day1",
+    pattern = 'd1',
+    full.names = TRUE
+    )
+  quickcal_datapath <- quickcal_datapath_list[[1]]
   
-  
-  
-  
+  to_conv <- tibble::tribble(
+    ~abc,         ~bead_fl,     ~TAPIR,
+    1255, 225.657914482378, "P1AE3306",
+    76883, 2459.87456327638, "P1AE3306",
+    227210, 7034.02147845973, "P1AE3306",
+    451938, 16365.2811854338, "P1AE3306",
+    1255,              401, "P1AF1094",
+    76883,             6411, "P1AF1094",
+    227210,            19890, "P1AF1094",
+    451938,            43337, "P1AF1094",
+    1255, 353.734028107512, "P1AF8008",
+    76883, 3313.71532077727, "P1AF8008",
+    227210, 10022.4641297128, "P1AF8008",
+    451938, 23399.3026638935, "P1AF8008",
+    1255,              411, "P1AG4483",
+    76883,             7946, "P1AG4483",
+    227210,            24116, "P1AG4483",
+    451938,            53510, "P1AG4483"
+  )
   
 }
 

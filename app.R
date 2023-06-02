@@ -402,9 +402,9 @@ server <- function(input, output, session) {
   
   quickcal <- reactive({
     req(input$quickcal)
-    quickcal <-  readxl::read_excel(input$quickcal$datapath)[7:10,3:4] %>% mutate(across(everything(),as.numeric))
-    colnames(quickcal) <- c('abc','bead_fl')  
-    return(quickcal)                                             
+    read_quickcal(input$quickcal$datapath)
+    
+    #return(quickcal)                                             
   })
   
   
