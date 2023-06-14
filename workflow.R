@@ -128,22 +128,25 @@ flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (p
     fill(`Well number`,`Plate number`) #filldown 
   
   
-  uni_depth <- unique(semi_clean$Depth) #find depth levels in df
+  # uni_depth <- unique(semi_clean$Depth) #find depth levels in df
   
   stats_flow <- grepl('=',semi_clean$Name) #find all rows with '='
   
   semi_clean$Var <- NA
-  
+  total_cell_pos <- which(is.na(semi_clean$Statistic))
+  gate_cell_pos <- which(stats_flow)-1
   
   semi_clean$Var[stats_flow] <- semi_clean$Name[stats_flow] %>%  #find all rows with '='
     map(~unlist(str_split(.,' = '))[1]) |> unlist() #split strings and select variable name for new column Var
   
+  semi_clean[gate_cell_pos,"Cell count_gated"] <- semi_clean$`#Cells`[gate_cell_pos]
+  
   
   semi_clean |> mutate(`Cell count_total` = case_when(is.na(Statistic)~`#Cells`), 
-                       `Cell count_morphology_live` = case_when(Depth == uni_depth[length(uni_depth)-1] ~ `#Cells`),
-                       `Cell count_morphology` = case_when(Depth == uni_depth[length(uni_depth)-2] ~ `#Cells`),
-                       `Plate number` = as.character(`Plate number`),
-                       ultimate_gate = case_when(Depth == uni_depth[length(uni_depth)-1] ~ str_extract(Name, '[^/](\\w*)\\S$'))) |>
+                       # `Cell count_gated` = case_when(Depth == uni_depth[length(uni_depth)-1] ~ `#Cells`),
+                       # `Cell count_morphology` = case_when(Depth == uni_depth[length(uni_depth)-2] ~ `#Cells`),
+                       `Plate number` = as.character(`Plate number`)) %>% 
+                       # ultimate_gate = case_when(Depth == uni_depth[length(uni_depth)-1] ~ str_extract(Name, '[^/](\\w*)\\S$'))) |>
     fill(everything(),.direction = "downup") %>% 
     filter(str_detect(Name,"=")) %>%  
     
@@ -192,7 +195,7 @@ flowjo_processing <- function(flowjo_datapath_list) {
   #   map_lgl(is.numeric) %>% 
   #   unlist() %>% 
   #   all() # check whether following columns are numeric
-  fj <- fj %>% select(-ultimate_gate) #remove unnecesary column from data
+  # fj <- fj %>% select(-ultimate_gate) #remove unnecesary column from data
   
   if (fj[,-c(1,2)] %>% map(is.numeric) %>% unlist() %>% all() %>% !.) {
     showNotification("Flowjo file cannot be parsed as numbers, please check format")
@@ -310,8 +313,8 @@ edds_analysis <- function(edds_combined,mfi_choices,control_mabs,p) {
   edds_dn <- edds_combined
   
   edds_dn <-  edds_dn |> 
-    mutate(`Viability` = `Cell count_morphology_live` / `Cell count_morphology`,
-           `Cell fraction_gated` = `Cell count_morphology_live` /`Cell count_total`) |> 
+    mutate(
+           `Cell fraction_gated` = `Cell count_gated` /`Cell count_total`) |> 
     group_by(`Experiment date`, `Biosample ID`, `Incubation time`) %>%
     do(mock_sub(.,mfi_choices)) |>
     mutate(
@@ -572,27 +575,29 @@ if(sys.nframe() == 0){
 
 # TMDD --------------------------------------------------------------------
 
-read_quickcal <- function(quickcal_datapath) {
-  readxl::read_excel(quickcal_datapath,range = 'C9:D12',
-                                  col_types = 'numeric',
-                                  col_names = c('abc','bead_fl')
-                                  )  %>% 
-    mutate('Tapir ID_unlabeled molecule (parent)' = str_extract(quickcal_datapath,
-                                                                '/(\\w.+) ',
-                                                                group = 1))
-  
-}
 
 
-return_models_from_list <- function(quickcal_datapath_list){
-  
-  quickcals <- map(quickcal_datapath_list,read_quickcal) %>% bind_rows()
-  
-  fit <- lmLi
-  
-  models <- map(quickcals, ~ lm(log(abc) ~ log(bead_fl), data = .x))
-  
-}
+# read_quickcal <- function(quickcal_datapath) {
+#   readxl::read_excel(quickcal_datapath,range = 'C9:D12',
+#                                   col_types = 'numeric',
+#                                   col_names = c('abc','bead_fl')
+#                                   )  %>% 
+#     mutate('Tapir ID_unlabeled molecule (parent)' = str_extract(quickcal_datapath,
+#                                                                 '/(\\w.+) ',
+#                                                                 group = 1))
+#   
+# }
+
+# 
+# return_models_from_list <- function(quickcal_datapath_list){
+#   
+#   quickcals <- map(quickcal_datapath_list,read_quickcal) %>% bind_rows()
+#   
+#   fit <- lmLi
+#   
+#   models <- map(quickcals, ~ lm(log(abc) ~ log(bead_fl), data = .x))
+#   
+# }
 
 
 convert_to_abc <- function(df,col_g,col_f,col_t,models){
@@ -633,7 +638,31 @@ if (sys.nframe() == 0){
     451938,            53510, "P1AG4483"
   )
   
+  # write_csv(to_conv,"./tmdd testing/combined_abc_beadfl_TAPIR.csv")
+  # 
+  # 
+  # to_conv_one <- to_conv %>% filter(TAPIR == "P1AE3306") %>% .[-1,]
+  # fit_n <- lm(log(abc) ~ log(bead_fl), data = to_conv_one)
+  # predict(fit_n, to_conv_one["bead_fl"]) %>% exp()
+  # 
+  fits <- lmList(log(abc) ~ log(bead_fl)|TAPIR, data = to_conv)
+  prediction <- predict(fits, to_conv %>% select(bead_fl, TAPIR)) %>% exp() 
+  
+  to_conv[-(seq(1,nrow(to_conv),4)),] %>% ggplot(aes(log(bead_fl),log(abc))) +
+    geom_smooth(method = "lm") + geom_point() + facet_wrap("TAPIR")
+  
+  
+  read_csv("./tmdd testing/combined_abc_beadfl_TAPIR.csv")
+  
+  flowjo_folder <- "Z:\\eADME\\Experiments\\LUCA\\results\\2023-05-08 Repeat huMacorphages TMDD Trem2 for Manuscript\\Titration + Donors Experiment\\Aman analysis using R"
+  
+  
+  
+  
 }
+
+
+
 
 
 

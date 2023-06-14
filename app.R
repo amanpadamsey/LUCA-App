@@ -61,14 +61,11 @@ ui <- fluidPage(
     tabPanel("TMDD", 
              sidebarPanel(
                tags$h3("Convert MFI to ABC"),
-               fileInput("quickcal", "Upload filled quick cal .xls file", accept = c(".xls",'.xlsx')),
-               fileInput('quickcal_conv_list', 'Upload .csv file(s) to be converted into ABC', accept = c('.csv'), multiple = TRUE),
-               downloadButton("download_abc", "Download converted files"),
-               
-             
-               tags$h3("Calculations using EDDS file"),
+               fileInput("quickcal", 
+                         "Upload .csv file containing ABC value of beads 
+                         (got from quickcal file from website) bead MFI values 
+                         and TAPIR IDS", accept = ".csv"),
                fileInput("edds_abc", "Upload EDDS .csv", accept = ".csv"),
-               fileInput("bead_fls_mabs", "Upload .csv file containing mfi of beads with corresponding mAb as header", accept = ".csv"),
                fileInput(
                  "flowjo_abc",
                  "Upload flowjo saved .xlsx files",
