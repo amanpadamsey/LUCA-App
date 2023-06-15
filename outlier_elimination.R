@@ -30,17 +30,18 @@ if(sys.nframe() == 0){
 
 # recursive fucntion to remove outliers until grubbs test is below p value
 outlier_rm <- function(df, col, p) {
-  if (sum(!is.na(df[[col]])) < 3)
+  # stopifnot("column not found in df" == col  %in% colnames(mtcars))
+  if (sum(!is.na(df[[col]])) < 3) #return df if number of elements in col is less than 3 
     return(df)
   
   # p <- 0.2
   # df <- df
-  
+
   out_test <-
     df[[col]] %>%
     grubbs.test()
   
-  if (out_test$p.value < p) {
+  if (out_test$p.value < p) { 
     if ("lowest" %in% str_split(out_test$alternative, " ", simplify = TRUE)) {
       df <-
         df[-which.min(df[[col]]), ]
