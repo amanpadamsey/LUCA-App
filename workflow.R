@@ -24,9 +24,9 @@ if (sys.nframe() == 0){
   mfi_choices <<- "Geometric Mean : pHAb-A"
   type_lm <<- "wo"  
   
-  edds_datapath <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/edds DCIAgtVA2.csv)"
-  flowjo_datapath_list <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/flowjo export.xlsx)"
-  dosing_datapath <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/dciagtva2 dosing.xlsx)"
+  edds_datapath <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/input files/edds DCIAgtVA2.csv)"
+  flowjo_datapath_list <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/input files/flowjo export.xlsx)"
+  dosing_datapath <<- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\DCIA gtVA2 (AAV VEGF Ang2 DutaFab)\Rshiny files/input files/dciagtva2 dosing.xlsx)"
   
   
   edds_combined <<- EDDS_combined_processing(
@@ -67,7 +67,8 @@ edds_read <- function(edds_datapath){
 #process edds file and give warnings if anything is amiss
 edds_process <- function(edds_datapath) {
   
-  edds <- edds_read(edds_datapath)
+  edds <- edds_read(edds_datapath) %>% 
+    mutate(`Plate number` = as.character(`Plate number`))
  
   dis_vals <-
     edds %>% 
@@ -156,7 +157,7 @@ flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (p
     
     #fill(everything(), .direction='downup') |> 
     
-    select(-c(Depth:`#Cells`,column_label)) #|> 
+    select(-c(Depth:`#Cells`,column_label)) #-> fj #|> 
     
     # unique() 
   
@@ -173,7 +174,7 @@ flow_jo_clean <- function(flowjo_datapath_list) { #enter list of flowjo files (p
 
 
 flowjo_processing <- function(flowjo_datapath_list) {
-  
+  # semi_clean
   fj <- flow_jo_clean(flowjo_datapath_list)
   
   na_vals <- fj %>% complete.cases() %>% all() #check for missing values, equals TRUE when no missing values present
@@ -207,7 +208,8 @@ flowjo_processing <- function(flowjo_datapath_list) {
   
   
   
-  flowjo <- fj %>% mutate(across(where(is.character), toupper)) #make everything upper case
+  flowjo <- fj %>% mutate(across(where(is.character), toupper)) %>% 
+    mutate(`Plate number` = as.character(`Plate number`))#make everything upper case
   
   return(flowjo)
 }
@@ -298,6 +300,8 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
   
   if(na_vals_mfi) showNotification("combined file has NA values, please check your input files",duration = NULL)
   
+  
+  edds_combined <- edds_combined %>% mutate(Outlier_detected = 'N')
   return(edds_combined)
 }
 
@@ -306,7 +310,7 @@ EDDS_combined_processing <- function(edds,mfi_choices,flowjo,dosing) {
 # Mathematical manipulations on EDDS --------------------------------------
 
 
-
+# p <- 0.1
 
 edds_analysis <- function(edds_combined,mfi_choices,control_mabs,p) {
   
@@ -316,27 +320,32 @@ edds_analysis <- function(edds_combined,mfi_choices,control_mabs,p) {
     mutate(
            `Cell fraction_gated` = `Cell count_gated` /`Cell count_total`) |> 
     group_by(`Experiment date`, `Biosample ID`, `Incubation time`) %>%
-    do(mock_sub(.,mfi_choices)) |>
+    do(mock_sub(.,mfi_choices))  %>% 
     mutate(
       '{mfi_choices}_BG subtracted_dose normalized' := .data[[paste0(mfi_choices, '_BG subtracted')]] /
         `Fluorescence_dosing solution`
     ) 
   
+  edds_dn <- edds_dn %>% ungroup() %>% mutate(SrNo = 1:nrow(.), Outlier_detected_ind = 'Y')
   
-  edds_dn_o <- edds_dn %>% group_by(`Biosample ID`,`Incubation time`,`Tapir ID_unlabeled molecule (parent)`,
+  edds_dn_o <- edds_dn %>% #filter(`Tapir ID_unlabeled molecule (parent)` %in% control_mabs) %>% 
+    group_by(`Biosample ID`,`Incubation time`,`Tapir ID_unlabeled molecule (parent)`,
                                         `Experiment date`) %>% 
     do(outlier_rm(.,paste0(mfi_choices, '_BG subtracted_dose normalized'),p)) %>% 
     ungroup()
   
-  edds_dn_o %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
-                                 regex('mock', ignore_case = TRUE))) %>%
+  edds_dn$Outlier_detected_ind[match(edds_dn_o$SrNo,edds_dn$SrNo)] <- 'N'
+  
+  edds_dn %>% filter(!str_detect(`Tapir ID_unlabeled molecule (parent)`,
+                                 regex('mock', ignore_case = TRUE)),
+                     Outlier_detected_ind != 'Y') %>%
     group_by(`Experiment date`,
              `Tapir ID_unlabeled molecule (parent)`,
              `Biosample ID`) %>%
     do(lm_wo_normpoint = lm(.[[paste0(mfi_choices, '_BG subtracted_dose normalized')]] ~ 0 + .[['Incubation time']],data = .)
     ) -> model_wo.pointnorm
   
-  edds_dn_o <- open_model(model_wo.pointnorm,'lm_wo_normpoint',edds_dn_o)
+  edds_dn <- open_model(model_wo.pointnorm,'lm_wo_normpoint',edds_dn)
   
   
   edds_dn <- edds_dn %>% ungroup() %>% group_by(`Experiment date`,`Biosample ID`) %>%

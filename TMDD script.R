@@ -200,8 +200,8 @@ edds_hu_mac_mdoel_ms <- edds_hu_mac_mdoel %>% filter(`Concentration_compound 1 (
 edds_hu_mac_mdoel_ms %>% ggplot(aes(pred_ind_womock,`Well number`)) + geom_col() +
   facet_wrap(vars(Date))
 
-
 # estimate quenched vs non quenched ---------------------------------------
+
 
 #formula : internalized = (quenched - (1-QE)*non_quenched)/QE
 
@@ -329,3 +329,43 @@ fitting_nls <- function(df) {
 #    left_join(ori_test_fitting_nls,.)
 #  
 # open_model(test_fitting_nls,"model_nls",edds_hu_mac_mdoel_ms)
+
+# Do fits for 2 time points and use slopes to fit Thomas equation ---------
+ 
+ 
+
+  edds_complete <- r"(G:\Shared drives\PS_iSafe__in vitro ADME LM gDrive\Projects\TREM2\Publication Figures & Data & Draft\GraphPad Files\Rshiny\edds_complete.csv)"
+  edds_complete <- read_csv(edds_complete) 
+  
+  #sanity checks
+  edds_complete %>% colnames() 
+  edds_complete %>% ggplot(aes(internalized,`Well number`)) + geom_col() + facet_wrap(vars(`Plate number`))  
+  
+  model_fits_lm <- edds_complete %>% filter(Quenched == "Q") %>% group_by(TAPIR,`Biosample ID`,`Concentration_compound 1 (nM)`) %>% 
+    do(model_tp = lm(internalized ~ 0 + `Incubation time`,data=.))
+  
+  edds_complete %>% filter(Quenched == "Q") %>% 
+    ggplot(aes(`Incubation time`,internalized,col = `Biosample ID`)) + geom_point() +
+    geom_smooth(method =  "lm", formula = "y ~ 0+x", xseq = c(0,20),se = FALSE) + 
+    facet_wrap(vars(TAPIR,`Concentration_compound 1 (nM)`))
+    
+  edds_complete_model <- open_model(model_fits_lm,"model_tp",ori_df = edds_complete) # %>% View()
+  
+  edds_complete_model %>% filter(Quenched == "Q") %>%  arrange_all() %>% 
+    ggplot(aes(`Concentration_compound 1 (nM)`,estimate__model_tp)) + geom_point()  + 
+    facet_grid(rows = vars(`Biosample ID`), cols = vars(TAPIR)) + geom_smooth(formula = "")
+  
+  
+
+# write files to make graphpad compatible ---------------------------------
+
+
+  edds_complete_model %>% filter(Quenched == "Q") %>% 
+    distinct(TAPIR,`Concentration_compound 1 (nM)`,`Biosample ID`,.keep_all = TRUE) %>% select(estimate__model_tp,`Biosample ID`,`Concentration_compound 1 (nM)`,
+                                 std.error__model_tp,TAPIR) -> to_write
+
+  
+  to_write %>% pivot_wider(names_from = TAPIR, values_from = c(estimate__model_tp,
+                                                               std.error__model_tp)) %>% 
+     select(-`Biosample ID`,-`Concentration_compound 1 (nM)`) %>% blend_df(.) %>% clipr::write_clip()
+    
